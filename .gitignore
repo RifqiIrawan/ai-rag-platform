@@ -1,0 +1,59 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+services/*/bin/
+services/*/tmp/
+vendor/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.mypy_cache/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/build/
+.next/
+
+# Docker
+*.pid
+
+# AI model caches / weights - never commit downloaded weights
+**/.cache/
+**/huggingface/
+**/paddleocr_models/
+*.gguf
+*.bin
+*.pt
+*.onnx
+
+# Env / secrets
+.env
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+logs/
+
+# Go workspace (local convenience, not committed)
+go.work
+go.work.sum
