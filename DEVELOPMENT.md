@@ -67,6 +67,6 @@ make lint-python     # ruff check
 ## Troubleshooting
 
 - **Healthcheck failing on a service**: `docker compose logs <service>` — most common causes are a downstream dependency (Postgres/Redis/MinIO/Qdrant) not yet ready, or a missing env var.
-- **Port already in use**: another local process is bound to one of 5432/6379/9000/9001/6333/6334/11434/8080-8086. Stop it or override the `*_PORT` var in `.env`.
+- **Port already in use**: another local process is bound to one of 5433/6379/9000/9001/6333/6334/11434/8080-8086. Stop it or override the `*_PORT` var in `.env`. Postgres defaults to host port 5433 (not 5432) specifically to avoid clashing with a locally installed PostgreSQL instance.
 - **`exec format error` in a container**: usually CRLF line endings from a Windows checkout of a shell script/Dockerfile. `.gitattributes` forces LF for these; re-clone or `git add --renormalize .` if you hit this.
 - **PaddleOCR/bge-m3 first-call latency**: both engines lazy-load on first real request (not at container startup), so the *first* `/extract` or `/generate` call after a fresh container start will be slow while weights download/load. `/health` itself is always instant.

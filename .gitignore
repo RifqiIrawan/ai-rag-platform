@@ -1,3 +1,6 @@
+# Local tooling state
+.claude/
+
 # Go
 *.exe
 *.exe~
