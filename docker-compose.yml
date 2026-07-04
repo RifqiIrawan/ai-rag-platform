@@ -1,0 +1,256 @@
+networks:
+  ai-rag-network:
+    name: ai-rag-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  qdrant_data:
+  ollama_data:
+
+services:
+  # ---------------- Infra ----------------
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: ai-rag-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-raguser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ragpassword}
+      POSTGRES_DB: ${POSTGRES_DB:-ai_rag_platform}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-raguser}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [ai-rag-network]
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai-rag-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [ai-rag-network]
+
+  minio:
+    image: minio/minio:latest
+    container_name: ai-rag-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-ragadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-ragadminpassword}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [ai-rag-network]
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: ai-rag-qdrant
+    restart: unless-stopped
+    ports:
+      - "${QDRANT_HTTP_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:6333/collections || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [ai-rag-network]
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ai-rag-ollama
+    restart: unless-stopped
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks: [ai-rag-network]
+    # NOTE: does not auto-pull a model (multi-GB download). Run `make ollama-pull` separately.
+
+  # ---------------- App services ----------------
+
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+    container_name: ai-rag-api-gateway
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      AUTH_SERVICE_URL: http://auth-service:8081
+      DOCUMENT_SERVICE_URL: http://document-service:8082
+      RAG_SERVICE_URL: http://rag-service:8085
+      NOTIFICATION_SERVICE_URL: http://notification-service:8086
+    ports:
+      - "${API_GATEWAY_PORT:-8080}:8080"
+    depends_on:
+      auth-service: { condition: service_started }
+      document-service: { condition: service_started }
+      rag-service: { condition: service_started }
+      notification-service: { condition: service_started }
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [ai-rag-network]
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+    container_name: ai-rag-auth-service
+    restart: unless-stopped
+    environment:
+      PORT: "8081"
+      DATABASE_URL: postgres://${POSTGRES_USER:-raguser}:${POSTGRES_PASSWORD:-ragpassword}@postgres:5432/${POSTGRES_DB:-ai_rag_platform}?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_EXPIRY_HOURS: ${JWT_EXPIRY_HOURS:-24}
+    ports:
+      - "${AUTH_SERVICE_PORT:-8081}:8081"
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [ai-rag-network]
+
+  document-service:
+    build:
+      context: ./services/document-service
+    container_name: ai-rag-document-service
+    restart: unless-stopped
+    environment:
+      PORT: "8082"
+      DATABASE_URL: postgres://${POSTGRES_USER:-raguser}:${POSTGRES_PASSWORD:-ragpassword}@postgres:5432/${POSTGRES_DB:-ai_rag_platform}?sslmode=disable
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-ragadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-ragadminpassword}
+      MINIO_BUCKET: ${MINIO_BUCKET:-documents}
+    ports:
+      - "${DOCUMENT_SERVICE_PORT:-8082}:8082"
+    depends_on:
+      postgres: { condition: service_healthy }
+      minio: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [ai-rag-network]
+
+  ocr-service:
+    build:
+      context: ./services/ocr-service
+    container_name: ai-rag-ocr-service
+    restart: unless-stopped
+    environment:
+      PORT: "8083"
+      DOCUMENT_SERVICE_URL: http://document-service:8082
+    ports:
+      - "${OCR_SERVICE_PORT:-8083}:8083"
+    depends_on:
+      document-service: { condition: service_started }
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks: [ai-rag-network]
+
+  embedding-service:
+    build:
+      context: ./services/embedding-service
+    container_name: ai-rag-embedding-service
+    restart: unless-stopped
+    environment:
+      PORT: "8084"
+      QDRANT_URL: http://qdrant:6333
+    ports:
+      - "${EMBEDDING_SERVICE_PORT:-8084}:8084"
+    depends_on:
+      qdrant: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks: [ai-rag-network]
+
+  rag-service:
+    build:
+      context: ./services/rag-service
+    container_name: ai-rag-rag-service
+    restart: unless-stopped
+    environment:
+      PORT: "8085"
+      QDRANT_URL: http://qdrant:6333
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2}
+      EMBEDDING_SERVICE_URL: http://embedding-service:8084
+    ports:
+      - "${RAG_SERVICE_PORT:-8085}:8085"
+    depends_on:
+      qdrant: { condition: service_healthy }
+      ollama: { condition: service_healthy }
+      embedding-service: { condition: service_started }
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [ai-rag-network]
+
+  notification-service:
+    build:
+      context: ./services/notification-service
+    container_name: ai-rag-notification-service
+    restart: unless-stopped
+    environment:
+      PORT: "8086"
+      REDIS_ADDR: redis:6379
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT:-8086}:8086"
+    depends_on:
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [ai-rag-network]
