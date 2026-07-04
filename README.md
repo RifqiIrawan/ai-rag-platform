@@ -18,6 +18,8 @@ A Go/Python microservices monorepo fronted by a single API gateway:
 | rag-service | Go | 8085 | Retrieval (Qdrant) + generation (Ollama) orchestration |
 | notification-service | Go | 8086 | Async notifications (Redis pub/sub) |
 
+Ports above are each service's internal container port (`PORT` env var, used for inter-service calls). Host-published ports come from `.env`'s `*_PORT` vars and may differ if a port is already taken locally (e.g. `AUTH_SERVICE_PORT` defaults to 8087, and `POSTGRES_PORT` to 5433, to avoid clashing with commonly pre-installed local services).
+
 Infra: PostgreSQL, Redis, MinIO, Qdrant, Ollama — all run via Docker Compose.
 
 Details: [docs/architecture/](docs/architecture/).

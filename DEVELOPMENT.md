@@ -20,7 +20,7 @@ Check each service directly:
 
 ```bash
 curl http://localhost:8080/health   # api-gateway
-curl http://localhost:8081/health   # auth-service
+curl http://localhost:8087/health   # auth-service (host port 8087; container port stays 8081)
 curl http://localhost:8082/health   # document-service
 curl http://localhost:8083/health   # ocr-service
 curl http://localhost:8084/health   # embedding-service
