@@ -1,6 +1,9 @@
 package router
 
 import (
+	"time"
+
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
 	"github.com/RifqiIrawan/ai-rag-platform/services/api-gateway/internal/config"
@@ -20,6 +23,13 @@ func proxyGroup(r gin.IRoutes, path, target string, extra ...gin.HandlerFunc) {
 
 func New(cfg *config.Config) *gin.Engine {
 	r := gin.Default()
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     cfg.CORSAllowedOrigins,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowCredentials: false,
+		MaxAge:           12 * time.Hour,
+	}))
 	r.GET("/health", handlers.Health)
 
 	api := r.Group("/api/v1")
