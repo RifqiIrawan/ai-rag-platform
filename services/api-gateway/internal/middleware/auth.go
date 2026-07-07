@@ -8,15 +8,19 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// RequireAuth validates the Authorization: Bearer <jwt> header issued by
-// auth-service, then sets X-User-Id (overwriting any client-supplied value,
-// so callers cannot spoof another user's id) before the request is proxied
-// downstream.
+// RequireAuth validates the caller's JWT (issued by auth-service), then sets
+// X-User-Id (overwriting any client-supplied value, so callers cannot spoof
+// another user's id) before the request is proxied downstream. The token is
+// read from the Authorization: Bearer header, falling back to a ?token=
+// query param — browsers cannot set custom headers during a WebSocket
+// handshake, so the query param is how /notifications/ws authenticates.
 func RequireAuth(secret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		header := c.GetHeader("Authorization")
-		tokenString, ok := strings.CutPrefix(header, "Bearer ")
+		tokenString, ok := strings.CutPrefix(c.GetHeader("Authorization"), "Bearer ")
 		if !ok || tokenString == "" {
+			tokenString = c.Query("token")
+		}
+		if tokenString == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing bearer token"})
 			return
 		}

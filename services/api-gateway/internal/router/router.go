@@ -27,7 +27,7 @@ func New(cfg *config.Config) *gin.Engine {
 		proxyGroup(api, "/auth", cfg.AuthServiceURL)
 		proxyGroup(api, "/documents", cfg.DocumentServiceURL, middleware.RequireAuth(cfg.JWTSecret))
 		proxyGroup(api, "/rag", cfg.RagServiceURL)
-		proxyGroup(api, "/notifications", cfg.NotificationServiceURL)
+		proxyGroup(api, "/notifications", cfg.NotificationServiceURL, middleware.RequireAuth(cfg.JWTSecret))
 	}
 	return r
 }

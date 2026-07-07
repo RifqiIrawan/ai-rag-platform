@@ -18,5 +18,8 @@ func New(cfg *config.Config, rdb *redis.Client) *gin.Engine {
 	notif := &handlers.NotificationHandler{Redis: rdb}
 	r.POST("/api/v1/notifications", notif.Publish)
 
+	stream := &handlers.StreamHandler{Redis: rdb}
+	r.GET("/api/v1/notifications/ws", stream.Stream)
+
 	return r
 }
