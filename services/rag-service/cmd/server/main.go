@@ -13,8 +13,9 @@ func main() {
 
 	qdrant := clients.NewQdrantClient(cfg.QdrantURL)
 	ollama := clients.NewOllamaClient(cfg.OllamaURL)
+	embedding := clients.NewEmbeddingClient(cfg.EmbeddingServiceURL)
 
-	r := router.New(cfg, qdrant, ollama)
+	r := router.New(cfg, qdrant, ollama, embedding)
 
 	log.Printf("rag-service listening on :%s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {

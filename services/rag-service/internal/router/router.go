@@ -8,14 +8,14 @@ import (
 	"github.com/RifqiIrawan/ai-rag-platform/services/rag-service/internal/handlers"
 )
 
-func New(cfg *config.Config, qdrant *clients.QdrantClient, ollama *clients.OllamaClient) *gin.Engine {
+func New(cfg *config.Config, qdrant *clients.QdrantClient, ollama *clients.OllamaClient, embedding *clients.EmbeddingClient) *gin.Engine {
 	r := gin.Default()
 
 	health := &handlers.HealthHandler{Qdrant: qdrant, Ollama: ollama}
 	r.GET("/health", health.Health)
 	r.GET("/health/ready", health.Ready)
 
-	rag := &handlers.RagHandler{Qdrant: qdrant, Ollama: ollama, Cfg: cfg}
+	rag := &handlers.RagHandler{Qdrant: qdrant, Ollama: ollama, Embedding: embedding, Cfg: cfg}
 	r.POST("/api/v1/rag/query", rag.Query)
 
 	return r

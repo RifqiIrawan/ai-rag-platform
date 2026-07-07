@@ -24,6 +24,10 @@ func main() {
 		log.Fatalf("failed to create minio client: %v", err)
 	}
 
+	if err := storage.EnsureBucket(context.Background(), minioClient, cfg.MinioBucket); err != nil {
+		log.Fatalf("failed to ensure minio bucket %q: %v", cfg.MinioBucket, err)
+	}
+
 	r := router.New(cfg, pool, minioClient)
 
 	log.Printf("document-service listening on :%s", cfg.Port)

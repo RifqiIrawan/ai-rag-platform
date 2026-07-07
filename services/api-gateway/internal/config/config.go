@@ -8,6 +8,7 @@ type Config struct {
 	DocumentServiceURL     string
 	RagServiceURL          string
 	NotificationServiceURL string
+	JWTSecret              string
 }
 
 func Load() *Config {
@@ -17,6 +18,7 @@ func Load() *Config {
 		DocumentServiceURL:     getEnv("DOCUMENT_SERVICE_URL", "http://document-service:8082"),
 		RagServiceURL:          getEnv("RAG_SERVICE_URL", "http://rag-service:8085"),
 		NotificationServiceURL: getEnv("NOTIFICATION_SERVICE_URL", "http://notification-service:8086"),
+		JWTSecret:              getEnv("JWT_SECRET", "change-me-in-production"),
 	}
 }
 
