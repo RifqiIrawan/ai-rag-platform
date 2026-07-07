@@ -38,6 +38,28 @@ func (q *QdrantClient) Healthy(ctx context.Context) error {
 	return nil
 }
 
+// CollectionExists reports whether the named collection exists.
+func (q *QdrantClient) CollectionExists(ctx context.Context, collection string) (bool, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, q.baseURL+"/collections/"+collection, nil)
+	if err != nil {
+		return false, err
+	}
+	resp, err := q.http.Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return true, nil
+	case http.StatusNotFound:
+		return false, nil
+	default:
+		return false, fmt.Errorf("qdrant returned status %d", resp.StatusCode)
+	}
+}
+
 type SearchResult struct {
 	ID      any             `json:"id"`
 	Score   float64         `json:"score"`

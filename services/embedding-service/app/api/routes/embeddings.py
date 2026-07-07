@@ -15,6 +15,17 @@ class GenerateRequest(BaseModel):
     text: str
 
 
+class EmbedRequest(BaseModel):
+    text: str
+
+
+@router.post("/embed")
+def embed_text(req: EmbedRequest):
+    model = get_embedding_model()
+    vector = model.encode(req.text).tolist()
+    return {"vector": vector, "dimensions": len(vector)}
+
+
 @router.post("/generate")
 def generate_embedding(req: GenerateRequest):
     model = get_embedding_model()
