@@ -16,7 +16,8 @@ A Go/Python microservices monorepo fronted by a single API gateway:
 | ocr-service | Python | 8083 | Text extraction from documents (PaddleOCR) |
 | embedding-service | Python | 8084 | Vector embeddings (bge-m3) stored in Qdrant |
 | rag-service | Go | 8085 | Retrieval (Qdrant) + generation (Ollama) orchestration |
-| notification-service | Go | 8086 | Async notifications (Redis pub/sub) |
+| notification-service | Go | 8086 | Async notifications (Redis pub/sub + WebSocket fan-out) |
+| frontend | React/Vite | 3000 | Web client (login, document upload, RAG chat, live notifications) |
 
 Ports above are each service's internal container port (`PORT` env var, used for inter-service calls). Host-published ports come from `.env`'s `*_PORT` vars and may differ if a port is already taken locally (e.g. `AUTH_SERVICE_PORT` defaults to 8087, and `POSTGRES_PORT` to 5433, to avoid clashing with commonly pre-installed local services).
 
@@ -30,6 +31,7 @@ Details: [docs/architecture/](docs/architecture/).
 cp .env.example .env
 docker compose up -d
 curl http://localhost:8080/health
+open http://localhost:3000   # web client
 ```
 
 Pull a local LLM model for rag-service (large download, run separately):
@@ -42,7 +44,7 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for local (non-Docker) development, and [CO
 
 ## Tech Stack
 
-Go (Gin) · Python (FastAPI) · PostgreSQL · Redis · MinIO · Qdrant · PaddleOCR · Ollama · bge-m3 · Docker Compose
+Go (Gin) · Python (FastAPI) · React (Vite, TypeScript, Tailwind) · PostgreSQL · Redis · MinIO · Qdrant · PaddleOCR · Ollama · bge-m3 · Docker Compose
 
 ## License
 

@@ -1,6 +1,9 @@
 package config
 
-import "os"
+import (
+	"os"
+	"strings"
+)
 
 type Config struct {
 	Port                   string
@@ -9,6 +12,7 @@ type Config struct {
 	RagServiceURL          string
 	NotificationServiceURL string
 	JWTSecret              string
+	CORSAllowedOrigins     []string
 }
 
 func Load() *Config {
@@ -19,6 +23,7 @@ func Load() *Config {
 		RagServiceURL:          getEnv("RAG_SERVICE_URL", "http://rag-service:8085"),
 		NotificationServiceURL: getEnv("NOTIFICATION_SERVICE_URL", "http://notification-service:8086"),
 		JWTSecret:              getEnv("JWT_SECRET", "change-me-in-production"),
+		CORSAllowedOrigins:     strings.Split(getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173"), ","),
 	}
 }
 
